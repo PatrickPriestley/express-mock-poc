@@ -1,0 +1,33 @@
+{
+    "users": [
+      {
+        "id": 1,
+        "firstName": "John",
+        "lastName": "Doe",
+        "email": "johndoe@example.com",
+        "age": 30,
+        "isActive": true,
+        "roles": ["user", "admin"],
+        "profile": {
+          "bio": "Enthusiastic software developer.",
+          "website": "https://johndoe.com"
+        },
+        "registrationDate": "2023-01-15"
+      },
+      {
+        "id": 2,
+        "firstName": "Jane",
+        "lastName": "Smith",
+        "email": "janesmith@example.com",
+        "age": 25,
+        "isActive": false,
+        "roles": ["user"],
+        "profile": {
+          "bio": "Aspiring digital artist.",
+          "website": "https://janesmith.art"
+        },
+        "registrationDate": "2023-03-22"
+      }
+    ]
+  }
+  
