@@ -1,4 +1,4 @@
-/*
+
 const request = require('supertest');
 const express = require('express');
 const creditCheck = require('../routes/creditCheck');
@@ -62,7 +62,7 @@ describe('Credit Check Routes', () => {
             expect(response.body.creditScore).toBeLessThanOrEqual(200);
             expect(response.body.additionalInfo).toContain('Extra high risk detected');
         });
-
+/*
         test('should return low risk for +lowRisk email', async () => {
             const userData = {
                 email: 'test+lowRisk@example.com',
