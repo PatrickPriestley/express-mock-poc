@@ -67,29 +67,22 @@ jobs:
           
           echo "color=$COLOR" >> $GITHUB_OUTPUT
           
-          # Create badge SVG using shields.io
-          curl -o coverage-badge.svg "https://img.shields.io/badge/coverage-${COVERAGE}%25-${COLOR}"
+      - name: Create coverage badge JSON
+        run: |
+          mkdir -p badge-data
+          echo '{"schemaVersion": 1, "label": "coverage", "message": "${{ steps.badge.outputs.coverage }}%", "color": "${{ steps.badge.outputs.color }}"}' > badge-data/coverage.json
           
-      - name: Upload coverage badge as artifact
+      - name: Upload coverage badge data as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-badge
-          path: coverage-badge.svg
-          retention-days: 30
+          name: coverage-badge-data
+          path: badge-data/coverage.json
+          retention-days: 90
 
-      - name: Create/Update Release with Badge
-        uses: softprops/action-gh-release@v1
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: "coverage-badge"
-          name: "Coverage Badge"
-          body: |
-            Latest test coverage badge
-            
-            Coverage: ${{ steps.badge.outputs.coverage }}%
-            
-            ![Coverage Badge](https://github.com/${{ github.repository }}/releases/download/coverage-badge/coverage-badge.svg)
-          files: coverage-badge.svg
-          prerelease: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./badge-data
+          destination_dir: badge
