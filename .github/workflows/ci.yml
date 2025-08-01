@@ -37,5 +37,4 @@ jobs:
       badge-label: 'coverage'
       green-threshold: '80'
       yellow-threshold: '60'
-    secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    secrets: inherit
