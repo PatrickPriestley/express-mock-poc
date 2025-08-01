@@ -84,13 +84,19 @@ jobs:
           curl -s "https://img.shields.io/badge/coverage-${COVERAGE}%25-${COLOR}" > badges/coverage.svg
 
       - name: Commit and push badge
-        if: steps.check.outputs.should_update == 'true'
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add badges/coverage.svg
-          git commit -m "📊 Update coverage badge to ${{ steps.check.outputs.current_coverage }}% [skip ci]"
-          git push
+  if: steps.check.outputs.should_update == 'true'
+  run: |
+    git config user.name "github-actions"
+    git config user.email "github-actions@github.com"
+
+    # Only add the badge if it changed
+    if git diff --quiet badges/coverage.svg; then
+      echo "⚠️ Badge hasn't changed, skipping commit"
+    else
+      git add badges/coverage.svg
+      git commit -m "📊 Update coverage badge to ${{ steps.check.outputs.current_coverage }}% [skip ci]"
+      git push
+    fi
 
       - name: Summary
         run: |
