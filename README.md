@@ -1,4 +1,4 @@
-[![Coverage Badge](https://img.shields.io/endpoint?url=https://patrickpriestley.github.io/express-mock-poc/badge/coverage.json)](https://github.com/PatrickPriestley/express-mock-poc/actions)
+![Coverage](./coverage-badge.svg)
 
 # Express Mock POC
 
