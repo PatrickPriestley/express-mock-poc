@@ -152,7 +152,7 @@ describe('Credit Check Routes', () => {
             expect(response.body).toHaveProperty('age', userData.age);
             expect(response.body).toHaveProperty('customField', userData.customField);
         });
-/*
+
         test('should test different NODE_ENV environment', async () => {
             // Save original environment
             const originalEnv = process.env.NODE_ENV;
@@ -180,7 +180,7 @@ describe('Credit Check Routes', () => {
 
             expect(response.body).toHaveProperty('creditScore');
             expect(response.body).toHaveProperty('riskLevel', 'Moderate');
-*/            
+         
             // Restore original environment
             process.env.NODE_ENV = originalEnv;
             
