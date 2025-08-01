@@ -79,7 +79,7 @@ describe('Credit Check Routes', () => {
             expect(response.body.creditScore).toBeLessThanOrEqual(800);
             expect(response.body.additionalInfo).toContain('Low risk detected');
         });
-
+*/
         test('should handle request without email', async () => {
             const userData = {
                 name: 'Anonymous User'
@@ -93,7 +93,7 @@ describe('Credit Check Routes', () => {
             expect(response.body).toHaveProperty('riskLevel', 'Moderate');
             expect(response.body).toHaveProperty('fraudFlag', false);
         });
-
+/*
         test('should handle empty request body', async () => {
             const response = await request(app)
                 .post('/credit-check')
@@ -118,7 +118,7 @@ describe('Credit Check Routes', () => {
             expect(response.body).toHaveProperty('riskLevel', 'Moderate');
             expect(response.body).toHaveProperty('fraudFlag', false);
         });
-
+*/
         test('should handle email with multiple risk flags (extraHighRisk takes precedence)', async () => {
             const userData = {
                 email: 'test+extraHighRisk+highRisk+lowRisk@example.com',
@@ -152,7 +152,7 @@ describe('Credit Check Routes', () => {
             expect(response.body).toHaveProperty('age', userData.age);
             expect(response.body).toHaveProperty('customField', userData.customField);
         });
-
+/*
         test('should test different NODE_ENV environment', async () => {
             // Save original environment
             const originalEnv = process.env.NODE_ENV;
@@ -180,7 +180,7 @@ describe('Credit Check Routes', () => {
 
             expect(response.body).toHaveProperty('creditScore');
             expect(response.body).toHaveProperty('riskLevel', 'Moderate');
-            
+*/            
             // Restore original environment
             process.env.NODE_ENV = originalEnv;
             
@@ -189,4 +189,3 @@ describe('Credit Check Routes', () => {
         });
     });
 });
-*/
