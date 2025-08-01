@@ -6,36 +6,17 @@ on:
   pull_request:
     branches: [ main ]
 
-permissions:
-  contents: write
-
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests with coverage
-        run: npm test -- --coverage
-
-  generate_coverage_badge:
-    needs: test
+  coverage-badge:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0  # Need history to compare badge changes
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -43,46 +24,176 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run tests with coverage
-        run: npm test -- --coverage --coverageReporters=json-summary
-
-      - name: Extract coverage percentage and create badge
-        id: badge
+      - name: Install dependencies and run tests
         run: |
-          COVERAGE=$(jq -r '.total.lines.pct' coverage/coverage-summary.json)
-          echo "Coverage: $COVERAGE%"
-          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+          npm ci
+          npm test -- --coverage
+
+      - name: Extract coverage and check for changes
+        id: check
+        run: |
+          # Extract current coverage percentage
+          if [ ! -f "coverage/coverage-summary.json" ]; then
+            echo "❌ Coverage file not found"
+            exit 1
+          fi
           
-          # Determine badge color
-          if (( $(echo "$COVERAGE >= 80" | bc -l) )); then
+          CURRENT_COVERAGE=$(node -p "
+            const coverage = JSON.parse(require('fs').readFileSync('coverage/coverage-summary.json', 'utf8'));
+            Math.round(coverage.total.lines.pct);
+          ")
+          
+          echo "✅ Current coverage: $CURRENT_COVERAGE%"
+          echo "current_coverage=$CURRENT_COVERAGE" >> $GITHUB_OUTPUT
+          
+          # Check if existing badge has different coverage
+          SHOULD_UPDATE="true"
+          REASON="new_badge"
+          PREVIOUS_COVERAGE=""
+          
+          if [ -f "coverage-badge.svg" ]; then
+            # Extract percentage from existing SVG
+            PREVIOUS_COVERAGE=$(grep -oP '(?<=coverage-|coverage%20-)[0-9]+(?=%25)' coverage-badge.svg | head -1 || echo "")
+            
+            if [ -n "$PREVIOUS_COVERAGE" ]; then
+              echo "📊 Previous coverage: $PREVIOUS_COVERAGE%"
+              
+              if [ "$CURRENT_COVERAGE" -eq "$PREVIOUS_COVERAGE" ]; then
+                SHOULD_UPDATE="false"
+                REASON="no_change"
+                echo "⏭️  Coverage unchanged, skipping badge update"
+              else
+                REASON="coverage_changed"
+                DIFF=$((CURRENT_COVERAGE - PREVIOUS_COVERAGE))
+                echo "📈 Coverage changed: ${PREVIOUS_COVERAGE}% → ${CURRENT_COVERAGE}% (${DIFF:+$DIFF}%)"
+              fi
+            else
+              echo "⚠️  Could not parse previous coverage, will update"
+              REASON="parse_error"
+            fi
+          else
+            echo "🆕 No existing badge found, will create new one"
+          fi
+          
+          echo "should_update=$SHOULD_UPDATE" >> $GITHUB_OUTPUT
+          echo "reason=$REASON" >> $GITHUB_OUTPUT
+          echo "previous_coverage=$PREVIOUS_COVERAGE" >> $GITHUB_OUTPUT
+
+      - name: Determine badge color
+        if: steps.check.outputs.should_update == 'true'
+        id: color
+        run: |
+          COVERAGE=${{ steps.check.outputs.current_coverage }}
+          
+          if [ "$COVERAGE" -ge 90 ]; then
             COLOR="brightgreen"
-          elif (( $(echo "$COVERAGE >= 60" | bc -l) )); then
+            STATUS="excellent"
+          elif [ "$COVERAGE" -ge 80 ]; then
+            COLOR="green"
+            STATUS="good"
+          elif [ "$COVERAGE" -ge 70 ]; then
+            COLOR="yellowgreen"
+            STATUS="fair"
+          elif [ "$COVERAGE" -ge 60 ]; then
             COLOR="yellow"
+            STATUS="needs improvement"
           else
             COLOR="red"
+            STATUS="poor"
           fi
           
           echo "color=$COLOR" >> $GITHUB_OUTPUT
-          
-      - name: Create coverage badge JSON
-        run: |
-          mkdir -p badge-data
-          echo '{"schemaVersion": 1, "label": "coverage", "message": "${{ steps.badge.outputs.coverage }}%", "color": "${{ steps.badge.outputs.color }}"}' > badge-data/coverage.json
-          
-      - name: Upload coverage badge data as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-badge-data
-          path: badge-data/coverage.json
-          retention-days: 90
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          echo "🎨 Badge will be $COLOR ($STATUS)"
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        if: github.ref == 'refs/heads/main'
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./badge-data
-          destination_dir: badge
+      - name: Generate coverage badge
+        if: steps.check.outputs.should_update == 'true'
+        run: |
+          COVERAGE=${{ steps.check.outputs.current_coverage }}
+          COLOR=${{ steps.color.outputs.color }}
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          
+          # Generate badge with version tag
+          BADGE_URL="https://img.shields.io/badge/coverage%20(${TAG_NAME})-${COVERAGE}%25-${COLOR}"
+          
+          echo "🔄 Generating badge: $BADGE_URL"
+          curl -s "$BADGE_URL" > coverage-badge.svg
+          
+          # Verify badge was created successfully
+          if [ ! -s "coverage-badge.svg" ]; then
+            echo "❌ Failed to generate badge"
+            exit 1
+          fi
+          
+          echo "✅ Badge generated successfully"
+
+      - name: Commit badge if changed
+        if: steps.check.outputs.should_update == 'true'
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          CURRENT=${{ steps.check.outputs.current_coverage }}
+          PREVIOUS=${{ steps.check.outputs.previous_coverage }}
+          REASON=${{ steps.check.outputs.reason }}
+          
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Add the badge file
+          git add coverage-badge.svg
+          
+          # Double-check that we actually have changes to commit
+          if git diff --staged --quiet; then
+            echo "⚠️  No changes to commit after badge generation"
+          else
+            # Create appropriate commit message based on the reason
+            case "$REASON" in
+              coverage_changed)
+                CHANGE=$((CURRENT - PREVIOUS))
+                if [ "$CHANGE" -gt 0 ]; then
+                  EMOJI="📈"
+                  DIRECTION="increased"
+                else
+                  EMOJI="📉"
+                  DIRECTION="decreased"
+                fi
+                COMMIT_MSG="$EMOJI Update coverage badge for $TAG_NAME: $DIRECTION from ${PREVIOUS}% to ${CURRENT}% [skip ci]"
+                ;;
+              new_badge)
+                COMMIT_MSG="🎯 Add coverage badge for $TAG_NAME: ${CURRENT}% [skip ci]"
+                ;;
+              *)
+                COMMIT_MSG="🔄 Update coverage badge for $TAG_NAME: ${CURRENT}% [skip ci]"
+                ;;
+            esac
+            
+            git commit -m "$COMMIT_MSG"
+            git push
+            
+            echo "✅ Badge committed: $COMMIT_MSG"
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## 🏷️ Coverage Badge Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Tag:** ${GITHUB_REF#refs/tags/}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Current Coverage:** ${{ steps.check.outputs.current_coverage }}%" >> $GITHUB_STEP_SUMMARY
+          echo "- **Previous Coverage:** ${{ steps.check.outputs.previous_coverage }}%" >> $GITHUB_STEP_SUMMARY
+          echo "- **Badge Updated:** ${{ steps.check.outputs.should_update }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Reason:** ${{ steps.check.outputs.reason }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.check.outputs.should_update }}" = "true" ]; then
+            echo "- **Badge Color:** ${{ steps.color.outputs.color }} (${{ steps.color.outputs.status }})" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📋 Add to your README:" >> $GITHUB_STEP_SUMMARY
+            echo '```markdown' >> $GITHUB_STEP_SUMMARY
+            echo "![Coverage](./coverage-badge.svg)" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🔗 Badge URL:" >> $GITHUB_STEP_SUMMARY
+            echo "https://raw.githubusercontent.com/${{ github.repository }}/main/coverage-badge.svg" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "ℹ️ Badge was not updated because coverage hasn't changed." >> $GITHUB_STEP_SUMMARY
+          fi
