@@ -12,13 +12,21 @@ const creditResponseTemplate = JSON.parse(fs.readFileSync(templatePath, 'utf8'))
 router.post('/credit-check', (req, res) => {
     const userData = req.body;
 
-    // Check if the email address contains +highRisk or +lowRisk
+    // Check if the email address contains +highRisk, +lowRisk, or +extraHighRisk
     const isHighRisk = userData.email && userData.email.includes('+highRisk');
     const isLowRisk = userData.email && userData.email.includes('+lowRisk');
+    const isExtraHighRisk = userData.email && userData.email.includes('+extraHighRisk');
 
     // Adjust the logic based on the keyword in the email address
     let creditCheckResult;
-    if (isHighRisk) {
+
+    if (isExtraHighRisk) {
+        creditCheckResult = {
+            creditScore: Math.floor(Math.random() * (200 - 1 + 1)) + 1,
+            riskLevel: 'Extra High',
+            fraudFlag: true
+        };
+    } else if (isHighRisk) {
         creditCheckResult = {
             creditScore: Math.floor(Math.random() * (400 - 150 + 1)) + 150,
             riskLevel: 'High',
@@ -42,7 +50,8 @@ router.post('/credit-check', (req, res) => {
         ...creditResponseTemplate,
         ...userData,
         ...creditCheckResult,
-        additionalInfo: isHighRisk ? 'High risk detected based on email flag'
+        additionalInfo: isExtraHighRisk ? 'Extra high risk detected based on email flag'
+                      : isHighRisk ? 'High risk detected based on email flag'
                       : isLowRisk ? 'Low risk detected based on email flag'
                       : 'Processed mock credit check'
     };
