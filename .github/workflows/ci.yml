@@ -30,17 +30,55 @@ jobs:
 
   generate_coverage_badge:
     needs: test
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-    uses: PatrickPriestley/shared-github-actions/.github/workflows/generate-coverage-badges.yml@main
-    with:
-      language: 'javascript'
-      working-directory: '.'
-      badge-path: 'coverage-badge.svg'
-      commit-badge: true
-      target-branch: 'main'
-      badge-label: 'coverage'
-      green-threshold: '80'
-      yellow-threshold: '60'
-    secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm test -- --coverage --coverageReporters=json-summary
+
+      - name: Extract coverage percentage and create badge
+        run: |
+          COVERAGE=$(jq -r '.total.lines.pct' coverage/coverage-summary.json)
+          echo "Coverage: $COVERAGE%"
+          
+          # Determine badge color
+          if (( $(echo "$COVERAGE >= 80" | bc -l) )); then
+            COLOR="brightgreen"
+          elif (( $(echo "$COVERAGE >= 60" | bc -l) )); then
+            COLOR="yellow"
+          else
+            COLOR="red"
+          fi
+          
+          # Create badge SVG using shields.io
+          curl -o coverage-badge.svg "https://img.shields.io/badge/coverage-${COVERAGE}%25-${COLOR}"
+          
+      - name: Commit and push badge
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Add the badge file
+          git add "./coverage-badge.svg"
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No badge changes to commit"
+          else
+            git commit -m "Update coverage badge [skip ci]"
+            git push
+            echo "Badge committed and pushed to repository"
+          fi
