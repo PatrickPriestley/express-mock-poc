@@ -30,6 +30,8 @@ jobs:
 
   generate_coverage_badge:
     needs: test
+    permissions:
+      contents: write
     uses: PatrickPriestley/shared-github-actions/.github/workflows/generate-coverage-badges.yml@main
     with:
       language: 'javascript'
