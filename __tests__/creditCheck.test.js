@@ -93,5 +93,99 @@ describe('Credit Check Routes', () => {
             expect(response.body).toHaveProperty('riskLevel', 'Moderate');
             expect(response.body).toHaveProperty('fraudFlag', false);
         });
+
+        test('should handle empty request body', async () => {
+            const response = await request(app)
+                .post('/credit-check')
+                .send({})
+                .expect(200);
+
+            expect(response.body).toHaveProperty('riskLevel', 'Moderate');
+            expect(response.body).toHaveProperty('fraudFlag', false);
+        });
+
+        test('should handle null email', async () => {
+            const userData = {
+                email: null,
+                name: 'Test User'
+            };
+
+            const response = await request(app)
+                .post('/credit-check')
+                .send(userData)
+                .expect(200);
+
+            expect(response.body).toHaveProperty('riskLevel', 'Moderate');
+            expect(response.body).toHaveProperty('fraudFlag', false);
+        });
+
+        test('should handle email with multiple risk flags (extraHighRisk takes precedence)', async () => {
+            const userData = {
+                email: 'test+extraHighRisk+highRisk+lowRisk@example.com',
+                name: 'Multiple Flags'
+            };
+
+            const response = await request(app)
+                .post('/credit-check')
+                .send(userData)
+                .expect(200);
+
+            expect(response.body).toHaveProperty('riskLevel', 'Extra High');
+            expect(response.body).toHaveProperty('fraudFlag', true);
+        });
+
+        test('should include all provided user data in response', async () => {
+            const userData = {
+                email: 'test@example.com',
+                name: 'John Doe',
+                age: 30,
+                customField: 'test value'
+            };
+
+            const response = await request(app)
+                .post('/credit-check')
+                .send(userData)
+                .expect(200);
+
+            expect(response.body).toHaveProperty('email', userData.email);
+            expect(response.body).toHaveProperty('name', userData.name);
+            expect(response.body).toHaveProperty('age', userData.age);
+            expect(response.body).toHaveProperty('customField', userData.customField);
+        });
+
+        test('should test different NODE_ENV environment', async () => {
+            // Save original environment
+            const originalEnv = process.env.NODE_ENV;
+            
+            // Test with staging environment
+            process.env.NODE_ENV = 'staging';
+            
+            // Clear require cache to reload module with new environment
+            delete require.cache[require.resolve('../routes/creditCheck')];
+            const stagingCreditCheck = require('../routes/creditCheck');
+            
+            const stagingApp = require('express')();
+            stagingApp.use(require('express').json());
+            stagingApp.use('/', stagingCreditCheck);
+
+            const userData = {
+                email: 'test@example.com',
+                name: 'Staging Test'
+            };
+
+            const response = await request(stagingApp)
+                .post('/credit-check')
+                .send(userData)
+                .expect(200);
+
+            expect(response.body).toHaveProperty('creditScore');
+            expect(response.body).toHaveProperty('riskLevel', 'Moderate');
+            
+            // Restore original environment
+            process.env.NODE_ENV = originalEnv;
+            
+            // Clear cache again to restore original module
+            delete require.cache[require.resolve('../routes/creditCheck')];
+        });
     });
 });
