@@ -1,3 +1,5 @@
+![Coverage Badge](./coverage-badge.svg)
+
 # Express Mock POC
 
 This is a proof of concept (POC) project for a mock server using Express.js. The server provides endpoints for user data and credit check simulations.
