@@ -91,6 +91,5 @@ jobs:
             ![Coverage Badge](https://github.com/${{ github.repository }}/releases/download/coverage-badge/coverage-badge.svg)
           files: coverage-badge.svg
           prerelease: true
-          make_latest: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
