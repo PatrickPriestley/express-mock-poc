@@ -50,9 +50,11 @@ jobs:
         run: npm test -- --coverage --coverageReporters=json-summary
 
       - name: Extract coverage percentage and create badge
+        id: badge
         run: |
           COVERAGE=$(jq -r '.total.lines.pct' coverage/coverage-summary.json)
           echo "Coverage: $COVERAGE%"
+          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
           
           # Determine badge color
           if (( $(echo "$COVERAGE >= 80" | bc -l) )); then
@@ -63,22 +65,32 @@ jobs:
             COLOR="red"
           fi
           
+          echo "color=$COLOR" >> $GITHUB_OUTPUT
+          
           # Create badge SVG using shields.io
           curl -o coverage-badge.svg "https://img.shields.io/badge/coverage-${COVERAGE}%25-${COLOR}"
           
-      - name: Commit and push badge
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          
-          # Add the badge file
-          git add "./coverage-badge.svg"
-          
-          # Check if there are changes to commit
-          if git diff --staged --quiet; then
-            echo "No badge changes to commit"
-          else
-            git commit -m "Update coverage badge [skip ci]"
-            git push
-            echo "Badge committed and pushed to repository"
-          fi
+      - name: Upload coverage badge as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-badge
+          path: coverage-badge.svg
+          retention-days: 30
+
+      - name: Create/Update Release with Badge
+        uses: softprops/action-gh-release@v1
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: "coverage-badge"
+          name: "Coverage Badge"
+          body: |
+            Latest test coverage badge
+            
+            Coverage: ${{ steps.badge.outputs.coverage }}%
+            
+            ![Coverage Badge](https://github.com/${{ github.repository }}/releases/download/coverage-badge/coverage-badge.svg)
+          files: coverage-badge.svg
+          prerelease: true
+          make_latest: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

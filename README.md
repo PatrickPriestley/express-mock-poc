@@ -1,4 +1,4 @@
-![Coverage Badge](./coverage-badge.svg)
+[![Coverage Badge](https://github.com/PatrickPriestley/express-mock-poc/releases/download/coverage-badge/coverage-badge.svg)](https://github.com/PatrickPriestley/express-mock-poc/actions)
 
 # Express Mock POC
 
