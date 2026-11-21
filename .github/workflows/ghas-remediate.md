@@ -45,9 +45,9 @@ steps:
     run: bash .github/ghas/prepare.sh "${{ github.repository }}" /tmp/gh-aw/agent/ghas
 
 safe-outputs:
-  # Burn-in stage 1 ("plan"): the PRs are prepared and shown in the run
-  # summary, but nothing is created. Remove this line for stage 3 (draft PRs).
-  staged: true
+  # Burn-in stage 3: draft PRs. (Stage 1, staged: true, cannot preview a PR
+  # that carries a patch: gh-aw v1.2.2 fails with "Object-pack recovery
+  # requires the non-staged safe-outputs publisher".)
   create-pull-request:
     draft: true
     title-prefix: "[GHAS] "
