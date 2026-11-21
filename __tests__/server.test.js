@@ -5,6 +5,11 @@ const creditCheck = require('../routes/creditCheck');
 
 // Create app instance similar to server.js
 const app = express();
+// Express logs every error that reaches its default handler unless the app's
+// env is 'test' (jest.setup.js sets NODE_ENV=development for the data file).
+// The invalid-JSON test below makes that log land after the test has ended,
+// and Jest then exits 1 with every test passing.
+app.set('env', 'test');
 app.use(express.json());
 app.use('/', userRoutes);
 app.use('/', creditCheck);
