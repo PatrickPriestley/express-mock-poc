@@ -1,0 +1,9 @@
+{
+  "_comment": "ghas-remediate config for the GitHub Agentic Workflows pilot in this repository. No Jira, no mono-repos.",
+  "github_org": "PatrickPriestley",
+  "local_repo_base_path": null,
+  "jira_project": null,
+  "branch_prefix": "vuln",
+  "branch_pattern": "{{PREFIX}}/{{JIRA_ID}}",
+  "mono_repos": {}
+}
