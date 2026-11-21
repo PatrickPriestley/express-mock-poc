@@ -91,6 +91,10 @@ disposable cache this workflow sets in `npm_config_cache`
 other package content. If one of these commands fails, report the failure
 as the skill says; do not work around it.
 
+`npm test` does not load `.env`: `server.js` calls `dotenv.config()`, but the
+only test that imports it (`__tests__/server.unit.test.js`) mocks `dotenv`.
+Never open, read or print `.env` yourself.
+
 ## What is already done for you
 
 A step before you ran the skill's GitHub reads. Read

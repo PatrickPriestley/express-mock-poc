@@ -29,6 +29,11 @@ describe('Server Configuration', () => {
             return mockExpress;
         });
 
+        // Mock dotenv: a unit test of the server's wiring has no business
+        // reading an env file, and agents verifying dependency fixes are
+        // not allowed to load one.
+        jest.doMock('dotenv', () => ({ config: jest.fn() }));
+
         // Mock routes
         jest.doMock('../routes/userRoutes', () => ({}));
         jest.doMock('../routes/creditCheck', () => ({}));
