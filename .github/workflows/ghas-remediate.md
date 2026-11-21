@@ -45,9 +45,10 @@ steps:
     run: bash .github/ghas/prepare.sh "${{ github.repository }}" /tmp/gh-aw/agent/ghas
 
 safe-outputs:
-  # Burn-in stage 3: draft PRs. (Stage 1, staged: true, cannot preview a PR
-  # that carries a patch: gh-aw v1.2.2 fails with "Object-pack recovery
-  # requires the non-staged safe-outputs publisher".)
+  # Burn-in stage 3: draft PRs. Stage 1 (staged: true) previewed three PRs
+  # from main in run 5. On a non-default branch (run 4) the staged preview
+  # failed with "Object-pack recovery requires the non-staged safe-outputs
+  # publisher", so staged runs should start from main.
   create-pull-request:
     draft: true
     title-prefix: "[GHAS] "
